@@ -1,0 +1,116 @@
+{
+  "title": "Test",
+  "recording": "Local test tone",
+  "notes": [
+    {
+      "lane": 0,
+      "time": 2000
+    },
+    {
+      "lane": 1,
+      "time": 2500
+    },
+    {
+      "lane": 2,
+      "time": 3000
+    },
+    {
+      "lane": 3,
+      "time": 3500
+    },
+    {
+      "lane": 0,
+      "time": 4000
+    },
+    {
+      "lane": 3,
+      "time": 4000
+    },
+    {
+      "lane": 1,
+      "time": 4500
+    },
+    {
+      "lane": 2,
+      "time": 4500
+    },
+    {
+      "lane": 0,
+      "time": 5000,
+      "end": 6500
+    },
+    {
+      "lane": 3,
+      "time": 5200
+    },
+    {
+      "lane": 3,
+      "time": 5400
+    },
+    {
+      "lane": 3,
+      "time": 5600
+    },
+    {
+      "lane": 3,
+      "time": 5800
+    },
+    {
+      "lane": 3,
+      "time": 6000
+    },
+    {
+      "lane": 1,
+      "time": 7000
+    },
+    {
+      "lane": 1,
+      "time": 7250
+    },
+    {
+      "lane": 1,
+      "time": 7500
+    },
+    {
+      "lane": 1,
+      "time": 7750
+    },
+    {
+      "lane": 0,
+      "time": 8500
+    },
+    {
+      "lane": 1,
+      "time": 8500
+    },
+    {
+      "lane": 2,
+      "time": 8500
+    },
+    {
+      "lane": 3,
+      "time": 8500
+    },
+    {
+      "lane": 2,
+      "time": 9000,
+      "end": 10200
+    },
+    {
+      "lane": 0,
+      "time": 11000
+    },
+    {
+      "lane": 1,
+      "time": 11500
+    },
+    {
+      "lane": 2,
+      "time": 12000
+    },
+    {
+      "lane": 3,
+      "time": 12500
+    }
+  ]
+}
