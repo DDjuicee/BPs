@@ -189,9 +189,10 @@ export function mountGame(options: {
       return;
     }
     const audioMs = now();
-    remember(advance(engine, audioMs, keysDown), audioMs);
+    remember(advance(engine, audioMs, keysDown, false), audioMs);
     keysDown[lane] = false;
     remember(release(engine, lane, audioMs), audioMs);
+    remember(advance(engine, audioMs, keysDown), audioMs);
   };
 
   const onVisibility = () => {

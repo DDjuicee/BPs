@@ -18,21 +18,21 @@ describe("accuracy", () => {
 describe("judgment", () => {
   it("scores the tap windows", () => {
     expect(gradeAt(0)).toMatchObject({ grade: "perfect", side: null });
-    expect(gradeAt(-40).grade).toBe("perfect");
-    expect(gradeAt(40).grade).toBe("perfect");
-    expect(gradeAt(-90)).toMatchObject({ grade: "good", side: "early" });
-    expect(gradeAt(90)).toMatchObject({ grade: "good", side: "late" });
-    expect(gradeAt(-91)).toMatchObject({ grade: "miss", side: "early" });
-    expect(gradeAt(-150)).toMatchObject({ grade: "miss", side: "early" });
+    expect(gradeAt(-60).grade).toBe("perfect");
+    expect(gradeAt(60).grade).toBe("perfect");
+    expect(gradeAt(-130)).toMatchObject({ grade: "good", side: "early" });
+    expect(gradeAt(130)).toMatchObject({ grade: "good", side: "late" });
+    expect(gradeAt(-131)).toMatchObject({ grade: "miss", side: "early" });
+    expect(gradeAt(-200)).toMatchObject({ grade: "miss", side: "early" });
 
     const early = createEngine([{ lane: 0, time: 1000 }], 0);
-    expect(press(early, 0, 1000 - 151)).toBeNull();
+    expect(press(early, 0, 1000 - 201)).toBeNull();
     expect(early.notes[0].head).toBe("pending");
     expect(press(early, 0, 1000)?.grade).toBe("perfect");
 
     const late = createEngine([{ lane: 0, time: 1000 }], 0);
-    expect(press(late, 0, 1091)).toBeNull();
-    advance(late, 1091, keys);
+    expect(press(late, 0, 1131)).toBeNull();
+    advance(late, 1131, keys);
     expect(late.notes[0].head).toBe("miss");
     expect(late.stats.combo).toBe(0);
   });
@@ -45,7 +45,7 @@ describe("judgment", () => {
       ],
       0,
     );
-    expect(press(engine, 0, 1050)?.grade).toBe("good");
+    expect(press(engine, 0, 1080)?.grade).toBe("good");
     expect(engine.notes[0].head).toBe("good");
     expect(engine.notes[1].head).toBe("pending");
   });
@@ -61,14 +61,34 @@ describe("judgment", () => {
     const down = [true, false, false, false] as const;
     expect(press(engine, 0, 5000)?.grade).toBe("perfect");
     advance(engine, 6460, down);
-    expect(release(engine, 0, 6460)).toMatchObject({ grade: "good", side: "early" });
+    expect(release(engine, 0, 6460)).toMatchObject({ grade: "perfect", side: null });
     expect(engine.stats.score).toBe(200);
-    expect(engine.stats.perfect).toBe(1);
-    expect(engine.stats.good).toBe(1);
+    expect(engine.stats.perfect).toBe(2);
+    expect(engine.stats.good).toBe(0);
     expect(engine.stats.combo).toBe(16);
   });
 
-  it("misses a hold released more than 40ms early and keeps the tick combo as the maximum", () => {
+  it("treats a hold released up to 80ms early as perfect", () => {
+    const onTime = createEngine([{ lane: 0, time: 5000, end: 6500 }], 0);
+    press(onTime, 0, 5000);
+    expect(release(onTime, 0, 6420)?.grade).toBe("perfect");
+
+    const early = createEngine([{ lane: 0, time: 5000, end: 6500 }], 0);
+    press(early, 0, 5000);
+    expect(release(early, 0, 6419)?.grade).toBe("miss");
+  });
+
+  it("treats a hold released up to 200ms late as perfect", () => {
+    const onTime = createEngine([{ lane: 0, time: 5000, end: 6500 }], 0);
+    press(onTime, 0, 5000);
+    expect(release(onTime, 0, 6700)?.grade).toBe("perfect");
+
+    const late = createEngine([{ lane: 0, time: 5000, end: 6500 }], 0);
+    press(late, 0, 5000);
+    expect(release(late, 0, 6701)?.grade).toBe("good");
+  });
+
+  it("misses a hold released more than 80ms early and keeps the tick combo as the maximum", () => {
     const engine = createEngine([{ lane: 0, time: 5000, end: 6500 }], 0);
     press(engine, 0, 5000);
     advance(engine, 5200, [true, false, false, false]);
@@ -90,10 +110,13 @@ describe("judgment", () => {
     expect(engine.stats.score).toBe(0);
   });
 
-  it("turns a still-held tail into good at the end", () => {
+  it("keeps a held tail pending through the late window, then good", () => {
     const engine = createEngine([{ lane: 0, time: 0, end: 300 }], 0);
+    const down = [true, false, false, false] as const;
     press(engine, 0, 0);
-    advance(engine, 300, [true, false, false, false]);
+    advance(engine, 500, down);
+    expect(engine.notes[0].tail).toBe("pending");
+    advance(engine, 501, down);
     expect(engine.notes[0].tail).toBe("good");
     expect(engine.stats.score).toBe(200);
   });

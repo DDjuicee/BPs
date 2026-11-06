@@ -1,5 +1,11 @@
 import type { ChartNote } from "../chart";
 
+const PERFECT_MS = 60;
+const GOOD_MS = 130;
+const EARLY_MISS_MS = 200;
+const TAIL_EARLY_MS = 80;
+const TAIL_LATE_MS = 200;
+
 export type Grade = "perfect" | "good" | "miss";
 export type Side = "early" | "late" | null;
 
@@ -71,13 +77,13 @@ export function press(engine: Engine, lane: number, audioMs: number): Feedback |
   for (const note of engine.notes) {
     if (note.lane !== lane || note.head !== "pending") continue;
     const dt = audioMs - (note.time + engine.offset);
-    if (dt < -150 || dt > 90) continue;
+    if (dt < -EARLY_MISS_MS || dt > GOOD_MS) continue;
     if (!target || note.time < target.time) target = note;
   }
   if (!target) return null;
 
   const dt = audioMs - (target.time + engine.offset);
-  const grade: Grade = dt < -90 ? "miss" : Math.abs(dt) <= 40 ? "perfect" : "good";
+  const grade: Grade = dt < -GOOD_MS ? "miss" : Math.abs(dt) <= PERFECT_MS ? "perfect" : "good";
   const feedback = applyHead(engine, target, grade, dt);
   if (grade !== "miss" && target.tail === "pending") {
     target.holding = true;
@@ -93,15 +99,22 @@ export function release(engine: Engine, lane: number, audioMs: number): Feedback
   const tailAt = target.end + engine.offset;
   target.holding = false;
   target.nextTickAudioMs = null;
-  if (audioMs < tailAt - 40) {
+  const dt = audioMs - tailAt;
+  if (dt < -TAIL_EARLY_MS) {
     target.ghostChartTime = audioMs - engine.offset;
-    return applyTail(engine, target, "miss", audioMs - tailAt);
+    return applyTail(engine, target, "miss", dt);
   }
-  return applyTail(engine, target, "good", audioMs - tailAt);
+  if (dt <= TAIL_LATE_MS) return applyTail(engine, target, "perfect", dt);
+  return applyTail(engine, target, "good", dt);
 }
 
 /** Resolve holds whose key has come up, then misses, ticks, and tails that reached their end. */
-export function advance(engine: Engine, audioMs: number, keysDown: readonly boolean[]): Feedback | null {
+export function advance(
+  engine: Engine,
+  audioMs: number,
+  keysDown: readonly boolean[],
+  resolveHeldTails = true,
+): Feedback | null {
   let last: Feedback | null = null;
   for (let lane = 0; lane < 4; lane += 1) {
     if (!keysDown[lane]) {
@@ -111,7 +124,7 @@ export function advance(engine: Engine, audioMs: number, keysDown: readonly bool
   }
 
   for (const note of engine.notes) {
-    if (note.head === "pending" && audioMs - (note.time + engine.offset) > 90) {
+    if (note.head === "pending" && audioMs - (note.time + engine.offset) > GOOD_MS) {
       last = applyHead(engine, note, "miss", audioMs - (note.time + engine.offset));
     }
   }
@@ -129,13 +142,15 @@ export function advance(engine: Engine, audioMs: number, keysDown: readonly bool
     }
   }
 
-  for (const note of engine.notes) {
-    if (!note.holding || note.tail !== "pending" || note.end == null) continue;
-    const tailAt = note.end + engine.offset;
-    if (audioMs >= tailAt) {
-      note.holding = false;
-      note.nextTickAudioMs = null;
-      last = applyTail(engine, note, "good", 0);
+  if (resolveHeldTails) {
+    for (const note of engine.notes) {
+      if (!note.holding || note.tail !== "pending" || note.end == null) continue;
+      const tailAt = note.end + engine.offset;
+      if (audioMs > tailAt + TAIL_LATE_MS) {
+        note.holding = false;
+        note.nextTickAudioMs = null;
+        last = applyTail(engine, note, "good", 0);
+      }
     }
   }
 
@@ -168,9 +183,9 @@ function applyHead(engine: Engine, note: RuntimeNote, grade: Grade, dt: number):
 
 function applyTail(engine: Engine, note: RuntimeNote, grade: Grade, dt: number): Feedback {
   note.tail = grade;
-  const points = grade === "good" ? 100 : 0;
+  const points = grade === "miss" ? 0 : 100;
   applyGrade(engine.stats, grade, points);
-  return { grade, side: sideOf(dt) };
+  return { grade, side: grade === "perfect" ? null : sideOf(dt) };
 }
 
 function applyGrade(stats: Stats, grade: Grade, points: number): void {
